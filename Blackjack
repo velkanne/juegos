@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blackjack - Juego de Cartas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600&display=swap');
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: linear-gradient(135deg, #1e1f27, #3c3f58);
+    font-family: 'Space Grotesk', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    color: #eee;
+    padding: 20px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 15px;
+    user-select: none;
+  }
+  header h1 {
+    font-size: 3rem;
+    margin: 0;
+    letter-spacing: 6px;
+    color: #ffd700;
+    text-shadow: 0 0 12px #ffd700aa;
+  }
+  #game {
+    background: #222538;
+    border-radius: 20px;
+    padding: 25px 40px 40px 40px;
+    box-shadow: 0 12px 36px #0009;
+    max-width: 400px;
+    width: 100%;
+  }
+  .section {
+    margin-bottom: 30px;
+  }
+  .section h2 {
+    font-weight: 600;
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+    color: #ffcb00;
+    text-shadow: 0 0 8px #ffcb0080;
+  }
+  .cards {
+    display: flex;
+    gap: 8px;
+    min-height: 96px;
+  }
+  .card {
+    width: 66px;
+    height: 96px;
+    border-radius: 10px;
+    background: white;
+    color: #333;
+    box-shadow: 0 3px 7px #0005;
+    font-weight: 700;
+    font-size: 1.8rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px 8px;
+    user-select: none;
+    position: relative;
+    perspective: 600px;
+    transform-style: preserve-3d;
+  }
+  .card.red {
+    color: #d32f2f;
+  }
+  .card .top-left,
+  .card .bottom-right {
+    font-size: 1.1rem;
+  }
+  .card .bottom-right {
+    align-self: flex-end;
+    transform: rotate(180deg);
+  }
+  .hidden {
+    background: linear-gradient(135deg, #444, #222);
+    box-shadow: inset 0 0 12px #000;
+  }
+  #scoreboard {
+    text-align: center;
+    font-size: 1.3rem;
+    margin-top: 10px;
+    font-weight: 600;
+    min-height: 28px;
+    color: #ffeb3b;
+    text-shadow: 0 0 10px #ffeb3b77;
+  }
+  #buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  button {
+    background: #ffd700;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 26px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #222;
+    cursor: pointer;
+    box-shadow: 0 6px 16px #aa8f00;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+    user-select: none;
+  }
+  button:hover:not([disabled]) {
+    background-color: #ffec57;
+    box-shadow: 0 8px 20px #ccbb00;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+    box-shadow: none;
+  }
+  #message {
+    margin-top: 30px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: #76ff03;
+    text-shadow: 0 0 10px #76ff0377;
+    min-height: 36px;
+  }
+  #message.lose {
+    color: #ef4444;
+    text-shadow: 0 0 10px #ef444477;
+  }
+  #message.tie {
+    color: #ffeb3b;
+    text-shadow: 0 0 10px #ffeb3b77;
+  }
+  footer {
+    margin-top: auto;
+    font-size: 0.75rem;
+    color: #666;
+    user-select: none;
+  }
+  @media (max-width: 460px) {
+    #game {
+      padding: 20px;
+      max-width: 320px;
+    }
+    .card {
+      width: 52px;
+      height: 76px;
+      font-size: 1.2rem;
+      padding: 4px 6px;
+    }
+    button {
+      padding: 12px 18px;
+      font-size: 0.95rem;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Blackjack</h1>
+</header>
+<div id="game" role="main" aria-label="Juego Blackjack">
+  <section class="section" aria-label="Cartas del jugador">
+    <h2>Jugador</h2>
+    <div class="cards" id="playerCards" aria-live="polite" aria-atomic="true"></div>
+    <div id="playerScore" aria-live="polite" aria-atomic="true" aria-label="Puntaje del jugador">Puntaje: 0</div>
+  </section>
+  <section class="section" aria-label="Cartas de la banca">
+    <h2>Banca</h2>
+    <div class="cards" id="dealerCards" aria-live="polite" aria-atomic="true"></div>
+    <div id="dealerScore" aria-live="polite" aria-atomic="true" aria-label="Puntaje de la banca">Puntaje: ?</div>
+  </section>
+  <div id="buttons">
+    <button id="hitBtn" aria-label="Pedir carta">Pedir Carta</button>
+    <button id="standBtn" aria-label="Plantarse">Plantarse</button>
+    <button id="newGameBtn" aria-label="Nuevo juego" disabled>Nuevo Juego</button>
+  </div>
+  <div id="message" role="alert" aria-live="assertive" aria-atomic="true"></div>
+</div>
+<footer>
+  Creado por Blackjack AI Clone
+</footer>
+
+<script>
+(() => {
+  /*
+   Simplified Blackjack:
+   - Values: 2-10 count as face value
+   - J, Q, K = 10
+   - Ace = 11 or 1 depending on score
+  */
+  const playerCardsDiv = document.getElementById('playerCards');
+  const dealerCardsDiv = document.getElementById('dealerCards');
+  const playerScoreDiv = document.getElementById('playerScore');
+  const dealerScoreDiv = document.getElementById('dealerScore');
+  const hitBtn = document.getElementById('hitBtn');
+  const standBtn = document.getElementById('standBtn');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const messageDiv = document.getElementById('message');
+
+  const suits = ['♠', '♥', '♦', '♣'];
+  const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  let deck = [];
+  let playerHand = [];
+  let dealerHand = [];
+  let gameOver = false;
+
+  function createDeck() {
+    let d = [];
+    for (let suit of suits) {
+      for (let rank of ranks) {
+        d.push({rank, suit});
+      }
+    }
+    return d;
+  }
+
+  function shuffleDeck(d) {
+    for(let i = d.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [d[i], d[j]] = [d[j], d[i]];
+    }
+    return d;
+  }
+
+  function cardValue(card) {
+    if (card.rank === 'A') return 11;
+    if (['J', 'Q', 'K'].includes(card.rank)) return 10;
+    return parseInt(card.rank);
+  }
+
+  function calculateScore(hand) {
+    let total = 0;
+    let aces = 0;
+    for (let card of hand) {
+      total += cardValue(card);
+      if (card.rank === 'A') aces++;
+    }
+    // Adjust Aces from 11 to 1 if busting
+    while(total > 21 && aces > 0) {
+      total -= 10;
+      aces--;
+    }
+    return total;
+  }
+
+  function createCardElement(card, hidden = false) {
+    const el = document.createElement('div');
+    el.classList.add('card');
+    if(hidden) {
+      el.classList.add('hidden');
+      el.setAttribute('aria-label', 'Carta oculta');
+      return el;
+    }
+    // Color red for hearts or diamonds
+    if(card.suit === '♥' || card.suit === '♦') {
+      el.classList.add('red');
+    }
+    el.innerHTML = `
+      <div class="top-left">${card.rank}${card.suit}</div>
+      <div class="bottom-right">${card.rank}${card.suit}</div>
+    `;
+    el.setAttribute('aria-label', `${card.rank} de ${suitName(card.suit)}`);
+    return el;
+  }
+
+  function suitName(suitChar) {
+    switch(suitChar){
+      case '♠': return 'picas';
+      case '♥': return 'corazones';
+      case '♦': return 'diamantes';
+      case '♣': return 'tréboles';
+      default: return 'naipes';
+    }
+  }
+
+  function renderHands(showDealerSecondCard = false) {
+    playerCardsDiv.innerHTML = '';
+    for(let card of playerHand) {
+      playerCardsDiv.appendChild(createCardElement(card));
+    }
+    dealerCardsDiv.innerHTML = '';
+    dealerHand.forEach((card, idx) => {
+      if(idx === 1 && !showDealerSecondCard) {
+        dealerCardsDiv.appendChild(createCardElement(card, true));
+      } else {
+        dealerCardsDiv.appendChild(createCardElement(card));
+      }
+    });
+
+    playerScoreDiv.textContent = `Puntaje: ${calculateScore(playerHand)}`;
+    if(showDealerSecondCard) {
+      dealerScoreDiv.textContent = `Puntaje: ${calculateScore(dealerHand)}`;
+    } else {
+      dealerScoreDiv.textContent = `Puntaje: ?`;
+    }
+  }
+
+  function startGame() {
+    deck = shuffleDeck(createDeck());
+    playerHand = [deck.pop(), deck.pop()];
+    dealerHand = [deck.pop(), deck.pop()];
+    gameOver = false;
+    messageDiv.textContent = '';
+    hitBtn.disabled = false;
+    standBtn.disabled = false;
+    newGameBtn.disabled = true;
+    renderHands(false);
+
+    if(calculateScore(playerHand) === 21) {
+      // Blackjack on initial Hand
+      endGame();
+    }
+  }
+
+  function playerHit() {
+    if (gameOver) return;
+    playerHand.push(deck.pop());
+    renderHands(false);
+    let playerScore = calculateScore(playerHand);
+    if(playerScore > 21) {
+      // Player bust
+      endGame();
+    }
+  }
+
+  function dealerPlay() {
+    let dealerScore = calculateScore(dealerHand);
+    while(dealerScore < 17) {
+      dealerHand.push(deck.pop());
+      dealerScore = calculateScore(dealerHand);
+    }
+  }
+
+  function endGame() {
+    gameOver = true;
+    hitBtn.disabled = true;
+    standBtn.disabled = true;
+    newGameBtn.disabled = false;
+    renderHands(true);
+
+    const playerScore = calculateScore(playerHand);
+    const dealerScore = calculateScore(dealerHand);
+
+    if(playerScore > 21) {
+      messageDiv.textContent = '¡Te pasaste! Pierdes 😞';
+      messageDiv.className = 'lose';
+    } else if(dealerScore > 21) {
+      messageDiv.textContent = 'La banca se pasó. ¡Ganas! 🎉';
+      messageDiv.className = '';
+    } else if(playerScore === dealerScore) {
+      messageDiv.textContent = 'Empate. 😐';
+      messageDiv.className = 'tie';
+    } else if(playerScore === 21 && playerHand.length === 2) {
+      messageDiv.textContent = '¡Blackjack! ¡Ganaste! 🥳';
+      messageDiv.className = '';
+    } else if(playerScore > dealerScore) {
+      messageDiv.textContent = '¡Ganaste! 🎉';
+      messageDiv.className = '';
+    } else {
+      messageDiv.textContent = 'La banca gana. 😞';
+      messageDiv.className = 'lose';
+    }
+  }
+
+  function playerStand() {
+    if (gameOver) return;
+    dealerPlay();
+    endGame();
+  }
+
+  hitBtn.addEventListener('click', () => {
+    playerHit();
+  });
+
+  standBtn.addEventListener('click', () => {
+    playerStand();
+  });
+
+  newGameBtn.addEventListener('click', () => {
+    startGame();
+  });
+
+  // Start initial game on load
+  startGame();
+
+})();
+</script>
+</body>
+</html>
+
